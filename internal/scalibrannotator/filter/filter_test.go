@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/osv-scalibr/extractor"
+	archivemeta "github.com/google/osv-scalibr/extractor/filesystem/language/java/archive/metadata"
 	apkmeta "github.com/google/osv-scalibr/extractor/filesystem/os/apk/metadata"
 	dpkgmeta "github.com/google/osv-scalibr/extractor/filesystem/os/dpkg/metadata"
 	"github.com/google/osv-scalibr/inventory"
@@ -54,6 +55,13 @@ func TestAnnotator_Annotate(t *testing.T) {
 		SourceCode: &extractor.SourceCodeIdentifier{
 			Commit: "-dirty",
 		},
+	}
+	// a jar without Maven coordinates (java/archive): group and artifact "unknown"
+	pkgMavenUnknown := &extractor.Package{
+		Name:     "unknown",
+		Version:  "unknown",
+		PURLType: purl.TypeMaven,
+		Metadata: &archivemeta.Metadata{GroupID: "unknown", ArtifactID: "unknown"},
 	}
 	pkgLinuxKernel := &extractor.Package{
 		Name:     "linux",
@@ -110,6 +118,14 @@ func TestAnnotator_Annotate(t *testing.T) {
 			wantPackages:    []*extractor.Package{pkgApkBuildCommit},
 			// the git-only package is still unscannable
 			wantFilteredPackages: []*extractor.Package{pkgUnscannableShortHash},
+		},
+		{
+			name:                 "maven_unknown_coordinates_are_unscannable",
+			isContainerScan:      true,
+			showAllPackages:      true,
+			inputPackages:        []*extractor.Package{pkgScannable, pkgMavenUnknown},
+			wantPackages:         []*extractor.Package{pkgScannable},
+			wantFilteredPackages: []*extractor.Package{pkgMavenUnknown},
 		},
 		{
 			name:            "container_scan_filters_linux_kernel",

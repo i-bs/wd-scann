@@ -94,7 +94,9 @@ func (a *Annotator) Annotate(_ context.Context, _ *annotator.ScanInput, results 
 		}
 
 		// Maven with name unknown or invalid ecosystem
-		if (imodels.Ecosystem(psr).Ecosystem == osvconstants.EcosystemMaven && imodels.Name(psr) == "unknown") ||
+		// java/archive reports jars without Maven coordinates as "unknown" (name)
+		// or "unknown:unknown" (imodels.Name joins group and artifact)
+		if (imodels.Ecosystem(psr).Ecosystem == osvconstants.EcosystemMaven && (imodels.Name(psr) == "unknown" || imodels.Name(psr) == "unknown:unknown")) ||
 			(imodels.Ecosystem(psr).GetValidity() != nil && !imodels.Ecosystem(psr).IsEmpty()) {
 			unscannableCount++
 			if a.showAllPackages {
