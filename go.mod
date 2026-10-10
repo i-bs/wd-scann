@@ -59,6 +59,7 @@ require (
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/ayoubfaouzi/pkcs7 v0.2.3 // indirect
 	github.com/bazelbuild/buildtools v0.0.0-20260716142318-04cf7de1434f // indirect
+	github.com/bell-sw/osv-internal v0.0.0 // indirect
 	github.com/canonical/chisel-manifest v1.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/bubbles v1.0.0 // indirect

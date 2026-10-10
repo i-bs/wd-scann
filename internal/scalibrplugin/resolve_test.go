@@ -23,6 +23,7 @@ import (
 	"github.com/google/osv-scalibr/extractor/filesystem/language/golang/gobinary"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/java/archive"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/java/pomxml"
+	"github.com/google/osv-scalibr/extractor/filesystem/language/java/vendorjdk"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/php/composerlock"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/python/requirements"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/python/wheelegg"
@@ -529,6 +530,7 @@ func TestResolve_Extractors(t *testing.T) {
 			want: []string{
 				apk.Name,
 				archive.Name,
+				vendorjdk.Name,
 				baseimage.Name,
 				cargoauditable.Name,
 				dpkg.Name,
@@ -551,6 +553,7 @@ func TestResolve_Extractors(t *testing.T) {
 			want: []string{
 				apk.Name,
 				archive.Name,
+				vendorjdk.Name,
 				baseimage.Name,
 				cargoauditable.Name,
 				dpkg.Name,
@@ -585,6 +588,7 @@ func TestResolve_Extractors(t *testing.T) {
 				chisel.Name,
 				gobinary.Name,
 				homebrew.Name,
+				vendorjdk.Name,
 				nodemodules.Name,
 				apkanno.Name,
 				dpkganno.Name,
@@ -601,6 +605,7 @@ func TestResolve_Extractors(t *testing.T) {
 			want: []string{
 				apk.Name,
 				archive.Name,
+				vendorjdk.Name,
 				baseimage.Name,
 				cargoauditable.Name,
 				dpkg.Name,

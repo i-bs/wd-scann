@@ -26,6 +26,7 @@ java/archive
 java/gradlelockfile
 java/gradleverificationmetadataxml
 java/pomxml
+java/vendorjdk
 javascript/bunlock
 javascript/nodemodules
 javascript/packagelockjson
@@ -70,6 +71,7 @@ weakcredentials/winlocal
 baseimage
 go/binary
 java/archive
+java/vendorjdk
 javascript/nodemodules
 misc/brew-source
 os/apk
@@ -110,6 +112,7 @@ weakcredentials/winlocal
 baseimage
 go/binary
 java/archive
+java/vendorjdk
 javascript/nodemodules
 misc/brew-source
 os/apk
@@ -139,6 +142,7 @@ vulnmatch/osvlocal
 baseimage
 go/binary
 java/archive
+java/vendorjdk
 javascript/nodemodules
 misc/brew-source
 os/apk
@@ -171,6 +175,7 @@ haskell/stacklock
 java/gradlelockfile
 java/gradleverificationmetadataxml
 java/pomxml
+java/vendorjdk
 javascript/bunlock
 javascript/packagelockjson
 javascript/pnpmlock

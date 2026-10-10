@@ -27,6 +27,7 @@ import (
 	"github.com/google/osv-scalibr/extractor/filesystem/language/java/gradlelockfile"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/java/gradleverificationmetadataxml"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/java/pomxml"
+	"github.com/google/osv-scalibr/extractor/filesystem/language/java/vendorjdk"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/javascript/bunlock"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/javascript/packagelockjson"
 	"github.com/google/osv-scalibr/extractor/filesystem/language/javascript/pnpmlock"
@@ -137,6 +138,9 @@ var ExtractorPresets = map[string]extractors.InitMap{
 		apk.Name: {protoCfg(apk.New)},
 		// Debian
 		dpkg.Name: {protoCfg(dpkg.New)},
+		// standalone vendor JDK/JRE and NIK runtimes; like apk/dpkg above it reacts to a few
+		// fixed file names only (libjvm.so / libjvm.dylib / jvm.dll, release, rt.jar)
+		vendorjdk.Name: {protoCfg(vendorjdk.New)},
 	},
 	"directory": {
 		gitrepo.Name:  {protoCfg(gitrepo.New)},
@@ -148,6 +152,8 @@ var ExtractorPresets = map[string]extractors.InitMap{
 		wheelegg.Name: {protoCfg(wheelegg.New)},
 		// Java
 		archive.Name: {protoCfg(archive.New)},
+		// standalone vendor JDK/JRE and NIK runtimes
+		vendorjdk.Name: {protoCfg(vendorjdk.New)},
 		// Go
 		gobinary.Name: {protoCfg(gobinary.New)},
 		// Javascript
