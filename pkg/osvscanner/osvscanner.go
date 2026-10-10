@@ -60,6 +60,18 @@ type ScannerActions struct {
 	// downloaded from (<LocalDBURL>/<ecosystem>/all.zip); empty means the
 	// osv.dev export bucket.
 	LocalDBURL string
+	// VendorURL is the base location of the OSV archives of the vendor
+	// products (<url>/<product>/all.zip): http(s), file:// or a directory.
+	// VendorFeeds locates single products as "<product>=<url>" pairs and wins
+	// over VendorURL. Without either, the vendor distributions
+	// come from the offline database host (LocalDBURL) and
+	// the standalone runtimes from the module's product base URL.
+	VendorURL   string
+	VendorFeeds []string
+	// VendorStrict makes an unavailable database of a vendor product fail the
+	// scan; by default it is a warning (the packages of that product were not
+	// checked) and the exit code is unchanged.
+	VendorStrict bool
 
 	// network-backed plugins
 	PluginNetworkDisabled bool
@@ -121,6 +133,9 @@ var ErrAPIFailed = errors.New("API query failed")
 // DoScan performs the osv scanner action, with optional reporter to output information
 func DoScan(actions ScannerActions) (models.VulnerabilityResults, error) {
 	// --- Sanity check flags ----
+	if err := checkVendorOptions(actions); err != nil {
+		return models.VulnerabilityResults{}, err
+	}
 	// TODO(v2): Move the logic of the offline flag changing other flags into here from the main.go/scan.go
 	if actions.CompareOffline {
 		if actions.ScanLicensesSummary {
@@ -171,6 +186,10 @@ func DoScan(actions ScannerActions) (models.VulnerabilityResults, error) {
 }
 
 func DoContainerScan(actions ScannerActions) (models.VulnerabilityResults, error) {
+	if err := checkVendorOptions(actions); err != nil {
+		return models.VulnerabilityResults{}, err
+	}
+
 	scanResults := results.ScanResults{
 		ConfigManager: config.Manager{
 			DefaultConfig: config.Config{},

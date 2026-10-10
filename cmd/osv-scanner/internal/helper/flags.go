@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	osvinternal "github.com/bell-sw/osv-internal"
 	"github.com/google/osv-scanner/v2/internal/cmdlogger"
 	"github.com/google/osv-scanner/v2/internal/reporter"
 	"github.com/urfave/cli/v3"
@@ -167,6 +168,21 @@ func BuildCommonScanFlags(defaultExtractors []string) []cli.Flag {
 			Usage:   "base URL (or file:// path) the offline databases are downloaded from, as <url>/<ecosystem>/all.zip; defaults to the osv.dev export bucket",
 			Hidden:  true,
 			Sources: cli.EnvVars("OSV_SCANNER_LOCAL_DB_URL"),
+		},
+		&cli.StringFlag{
+			Name:    "vendor-url",
+			Usage:   "base location of the vendor OSV archives for all products (<url>/<product>/all.zip); http(s), file:// or a directory",
+			Sources: cli.EnvVars("OSV_SCANNER_VENDOR_URL"),
+		},
+		&cli.StringSliceFlag{
+			Name:    "vendor-feed",
+			Usage:   "location of the vendor OSV archive of one product, as \"<product>=<url>\"; repeatable; products: " + strings.Join(osvinternal.Ecosystems, ", "),
+			Sources: cli.EnvVars("OSV_SCANNER_VENDOR_FEED"),
+		},
+		&cli.BoolFlag{
+			Name:    "vendor-strict",
+			Usage:   "fail when vendor OSV data is unavailable instead of warning and continuing",
+			Sources: cli.EnvVars("OSV_SCANNER_VENDOR_STRICT"),
 		},
 		&cli.StringSliceFlag{
 			Name:  "call-analysis",

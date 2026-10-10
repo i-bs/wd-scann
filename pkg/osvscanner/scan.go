@@ -11,12 +11,14 @@ import (
 	"slices"
 	"strings"
 
+	osvinternal "github.com/bell-sw/osv-internal"
 	scalibr "github.com/google/osv-scalibr"
 	"github.com/google/osv-scalibr/annotator"
 	cpb "github.com/google/osv-scalibr/binary/proto/config_go_proto"
 	"github.com/google/osv-scalibr/enricher"
 	"github.com/google/osv-scalibr/enricher/packagedeprecation"
 	"github.com/google/osv-scalibr/enricher/reachability/java"
+	"github.com/google/osv-scalibr/enricher/vulnmatch/osvlocal"
 	"github.com/google/osv-scalibr/extractor"
 	"github.com/google/osv-scalibr/extractor/filesystem"
 	"github.com/google/osv-scalibr/extractor/filesystem/simplefileapi"
@@ -47,6 +49,16 @@ func configurePlugins(plugins []plugin.Plugin, accessors ExternalAccessors, acti
 			// Only attempt to vendor check git directories if we are not skipping scanning root git directories
 			ScanGitDir: !actions.IncludeGitRoot,
 			OSVClient:  accessors.OSVDevClient,
+		})
+		// Next to api.osv.dev the local matcher handles the ecosystems the API
+		// does not serve (the vendor's JDK / NIK); offline it matches everything.
+		// The feeds were validated by checkVendorOptions.
+		feeds, _ := osvlocal.ParseVendorFeeds(actions.VendorFeeds)
+		osvlocal.Configure(plug, osvlocal.Options{
+			LocalOnlyEcosystems: !actions.CompareOffline,
+			VendorURL:           actions.VendorURL,
+			VendorFeeds:         feeds,
+			VendorStrict:        actions.VendorStrict,
 		})
 	}
 }
@@ -150,7 +162,8 @@ func getPlugins(
 	if actions.CompareOffline {
 		actions.PluginsEnabled = append(actions.PluginsEnabled, "vulnmatch/osvlocal")
 	} else {
-		actions.PluginsEnabled = append(actions.PluginsEnabled, "vulnmatch/osvdev")
+		// osvlocal is restricted to the ecosystems api.osv.dev does not serve, see configurePlugins
+		actions.PluginsEnabled = append(actions.PluginsEnabled, "vulnmatch/osvdev", "vulnmatch/osvlocal")
 	}
 
 	plugins := scalibrplugin.Resolve(actions.PluginsEnabled, actions.PluginsDisabled, finalScalibrConfig)
@@ -575,6 +588,13 @@ func dedupPackageVulns(vulns []*inventory.PackageVuln) []*inventory.PackageVuln 
 	return result
 }
 
+// checkVendorOptions validates the --vendor-feed pairs.
+func checkVendorOptions(actions ScannerActions) error {
+	_, err := osvlocal.ParseVendorFeeds(actions.VendorFeeds)
+
+	return err
+}
+
 // vulnMatchFailure returns an error when a failed vulnerability matcher must
 // fail the scan: a missing or unreadable cached offline database
 // (--offline-vulnerabilities without --download-offline-databases). With
@@ -586,6 +606,13 @@ func vulnMatchFailure(status *plugin.Status, actions ScannerActions) error {
 	}
 
 	if actions.CompareOffline && !actions.DownloadDatabases {
+		return fmt.Errorf("vulnerability matching failed (%s): %s", status.Name, status.Status.FailureReason)
+	}
+
+	// An unavailable vendor database fails the plugin only with --vendor-strict,
+	// and then fails the scan in every mode. The failure reason is the module's
+	// canonical warning, which opens with the vendor name.
+	if actions.VendorStrict && strings.Contains(status.Status.FailureReason, osvinternal.Vendor+" OSV data for") {
 		return fmt.Errorf("vulnerability matching failed (%s): %s", status.Name, status.Status.FailureReason)
 	}
 
