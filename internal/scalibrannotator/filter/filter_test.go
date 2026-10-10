@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/osv-scalibr/extractor"
+	apkmeta "github.com/google/osv-scalibr/extractor/filesystem/os/apk/metadata"
 	dpkgmeta "github.com/google/osv-scalibr/extractor/filesystem/os/dpkg/metadata"
 	"github.com/google/osv-scalibr/inventory"
 	"github.com/google/osv-scalibr/purl"
@@ -38,6 +39,21 @@ func TestAnnotator_Annotate(t *testing.T) {
 			Commit: "1234567890abcdef1234567890abcdef12345678",
 		},
 		PURLType: purl.TypeNPM,
+	}
+	// queried by version: the short apk build commit ("c:-dirty") must not filter it
+	pkgApkBuildCommit := &extractor.Package{
+		Name:     "liberica21-lite-jdk-no-deps",
+		Version:  "21.0.2_p14-r1",
+		PURLType: purl.TypeApk,
+		Metadata: &apkmeta.Metadata{
+			OSID:        "alpaquita",
+			OSVersionID: "23",
+			PackageName: "liberica21-lite-jdk-no-deps",
+			OriginName:  "liberica21-lite",
+		},
+		SourceCode: &extractor.SourceCodeIdentifier{
+			Commit: "-dirty",
+		},
 	}
 	pkgLinuxKernel := &extractor.Package{
 		Name:     "linux",
@@ -85,6 +101,15 @@ func TestAnnotator_Annotate(t *testing.T) {
 			inputPackages:        []*extractor.Package{pkgScannable, pkgUnscannableNoVersion, pkgUnscannableShortHash},
 			wantPackages:         []*extractor.Package{pkgScannable},
 			wantFilteredPackages: []*extractor.Package{pkgUnscannableNoVersion, pkgUnscannableShortHash},
+		},
+		{
+			name:            "apk_package_with_short_build_commit_is_kept",
+			isContainerScan: true,
+			showAllPackages: true,
+			inputPackages:   []*extractor.Package{pkgApkBuildCommit, pkgUnscannableShortHash},
+			wantPackages:    []*extractor.Package{pkgApkBuildCommit},
+			// the git-only package is still unscannable
+			wantFilteredPackages: []*extractor.Package{pkgUnscannableShortHash},
 		},
 		{
 			name:            "container_scan_filters_linux_kernel",

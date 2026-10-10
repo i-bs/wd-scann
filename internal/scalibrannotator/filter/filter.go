@@ -105,7 +105,10 @@ func (a *Annotator) Annotate(_ context.Context, _ *annotator.ScanInput, results 
 		}
 
 		// Short commit hashes warning
-		if imodels.Commit(psr) != "" && len(imodels.Commit(psr)) < 40 {
+		// A package with an ecosystem, name and version is queried by version;
+		// its commit is metadata only (apk records the build commit in "c:",
+		// which may be "-dirty").
+		if imodels.Commit(psr) != "" && len(imodels.Commit(psr)) < 40 && !queryableByVersion(psr) {
 			warnings = append(warnings, fmt.Sprintf("Skipping %s: short commit hash %q cannot be queried; OSV API requires a full 40-character SHA.", imodels.Name(psr), imodels.Commit(psr)))
 			unscannableCount++
 			if a.showAllPackages {
@@ -171,6 +174,15 @@ func (a *Annotator) Annotate(_ context.Context, _ *annotator.ScanInput, results 
 }
 
 // FilteredPackages returns the list of packages filtered out that should be preserved.
+// queryableByVersion reports whether the package can be looked up by
+// ecosystem, name and version, in which case its commit (if any) is not used.
+func queryableByVersion(pkg *extractor.Package) bool {
+	eco := imodels.Ecosystem(pkg)
+
+	return !eco.IsEmpty() && eco.GetValidity() == nil && eco.String() != "GIT" &&
+		imodels.Name(pkg) != "" && imodels.Version(pkg) != ""
+}
+
 func (a *Annotator) FilteredPackages() []*extractor.Package {
 	return a.filteredPackages
 }
