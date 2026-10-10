@@ -263,6 +263,21 @@ func DoContainerScan(actions ScannerActions) (models.VulnerabilityResults, error
 		return models.VulnerabilityResults{}, ErrNoPackagesFound
 	}
 
+	// --- Check status of the plugins ---
+	for _, status := range scalibrSR.PluginStatus {
+		if status.Status.Status == plugin.ScanStatusSucceeded {
+			continue
+		}
+		msg := status.Status.FailureReason
+		for _, fileError := range status.Status.FileErrors {
+			msg += fmt.Sprintf("\n\t%s: %s", fileError.FilePath, fileError.ErrorMessage)
+		}
+		cmdlogger.Errorf("Error during scan: (%s) %s", status.Name, msg)
+		if err := vulnMatchFailure(status, actions); err != nil {
+			return models.VulnerabilityResults{}, err
+		}
+	}
+
 	// --- Save Scalibr Scan Results ---
 	scanResults.Inventory = scalibrSR.Inventory
 

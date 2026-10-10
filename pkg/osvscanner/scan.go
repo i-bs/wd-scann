@@ -376,6 +376,9 @@ SBOMLoop:
 				if criticalError {
 					return nil, nil, errors.New("extraction failed on specified lockfile")
 				}
+				if err := vulnMatchFailure(status, actions); err != nil {
+					return nil, nil, err
+				}
 			}
 		}
 
@@ -570,4 +573,21 @@ func dedupPackageVulns(vulns []*inventory.PackageVuln) []*inventory.PackageVuln 
 	})
 
 	return result
+}
+
+// vulnMatchFailure returns an error when a failed vulnerability matcher must
+// fail the scan: a missing or unreadable cached offline database
+// (--offline-vulnerabilities without --download-offline-databases). With
+// downloads enabled the failure is only logged, so that an ecosystem the
+// download host does not publish does not abort the scan.
+func vulnMatchFailure(status *plugin.Status, actions ScannerActions) error {
+	if status.Status.Status == plugin.ScanStatusSucceeded || !strings.HasPrefix(status.Name, "vulnmatch/") {
+		return nil
+	}
+
+	if actions.CompareOffline && !actions.DownloadDatabases {
+		return fmt.Errorf("vulnerability matching failed (%s): %s", status.Name, status.Status.FailureReason)
+	}
+
+	return nil
 }
