@@ -157,9 +157,16 @@ func BuildCommonScanFlags(defaultExtractors []string) []cli.Flag {
 			Usage: "downloads vulnerability databases for offline comparison",
 		},
 		&cli.StringFlag{
-			Name:   "local-db-path",
-			Usage:  "sets the path that local databases should be stored",
-			Hidden: true,
+			Name:    "local-db-path",
+			Usage:   "sets the path that local databases should be stored",
+			Hidden:  true,
+			Sources: cli.EnvVars("OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY"),
+		},
+		&cli.StringFlag{
+			Name:    "local-db-url",
+			Usage:   "base URL (or file:// path) the offline databases are downloaded from, as <url>/<ecosystem>/all.zip; defaults to the osv.dev export bucket",
+			Hidden:  true,
+			Sources: cli.EnvVars("OSV_SCANNER_LOCAL_DB_URL"),
 		},
 		&cli.StringSliceFlag{
 			Name:  "call-analysis",

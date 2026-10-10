@@ -36,6 +36,9 @@ import (
 	"github.com/google/osv-scanner/v2/pkg/osvscanner/internal/scanners"
 )
 
+// defaultLocalDBURL is the osv.dev export bucket, see ScannerActions.LocalDBURL.
+const defaultLocalDBURL = "https://osv-vulnerabilities.storage.googleapis.com"
+
 var ErrExtractorNotFound = errors.New("could not determine extractor suitable to this file")
 
 func configurePlugins(plugins []plugin.Plugin, accessors ExternalAccessors, actions ScannerActions) {
@@ -75,12 +78,16 @@ func getPlugins(
 		},
 	)
 
+	localDBURL := strings.TrimSuffix(actions.LocalDBURL, "/")
+	if localDBURL == "" {
+		localDBURL = defaultLocalDBURL
+	}
 	pluginSpecific = append(pluginSpecific, &cpb.PluginSpecificConfig{
 		Config: &cpb.PluginSpecificConfig_Osvlocal{
 			Osvlocal: &cpb.OSVLocalConfig{
 				Download:   actions.DownloadDatabases,
 				LocalPath:  actions.LocalDBPath,
-				RemoteHost: "https://osv-vulnerabilities.storage.googleapis.com",
+				RemoteHost: localDBURL,
 			},
 		},
 	})

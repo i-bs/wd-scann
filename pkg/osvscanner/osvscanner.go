@@ -56,6 +56,10 @@ type ScannerActions struct {
 	CompareOffline    bool
 	DownloadDatabases bool
 	LocalDBPath       string
+	// LocalDBURL is the base URL (or file:// path) the offline databases are
+	// downloaded from (<LocalDBURL>/<ecosystem>/all.zip); empty means the
+	// osv.dev export bucket.
+	LocalDBURL string
 
 	// network-backed plugins
 	PluginNetworkDisabled bool
