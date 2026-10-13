@@ -2,6 +2,8 @@ package osvscanner
 
 import (
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -36,6 +38,10 @@ func TestVulnMatchFailure(t *testing.T) {
 		{"online, vendor database unavailable, strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{VendorStrict: true}, true},
 		{"offline with downloads, vendor database unavailable, strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{CompareOffline: true, DownloadDatabases: true, VendorStrict: true}, true},
 		{"strict, failure of another kind", failed("vulnmatch/osvlocal", "db host returned 404 Not Found"), ScannerActions{VendorStrict: true}, false},
+		{"online, vendor database unavailable, --vendor-url given, not strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{VendorURL: "https://mirror.example/osv"}, false},
+		{"online, vendor database unavailable, --vendor-feed given, not strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{VendorFeeds: []string{osvinternal.EcosystemJDK + "=https://mirror.example/osv"}}, false},
+		{"online, vendor database unavailable, --vendor-url given, strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{VendorURL: "https://mirror.example/osv", VendorStrict: true}, true},
+		{"offline with downloads, vendor database unavailable, --vendor-url given, strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{CompareOffline: true, DownloadDatabases: true, VendorURL: "/srv/osv", VendorStrict: true}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -51,12 +57,40 @@ func TestVulnMatchFailure(t *testing.T) {
 func TestCheckVendorOptions(t *testing.T) {
 	t.Parallel()
 
-	if err := checkVendorOptions(ScannerActions{VendorFeeds: []string{osvinternal.EcosystemJDK + "=https://example.com/osv", strings.ToLower(osvinternal.EcosystemLinux) + "=/srv/osv"}}); err != nil {
-		t.Errorf("checkVendorOptions() = %v, want nil", err)
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "linux.zip")
+	if err := os.WriteFile(archive, []byte("PK"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, ok := range []ScannerActions{
+		{},
+		{VendorFeeds: []string{osvinternal.EcosystemJDK + "=https://example.com/osv", strings.ToLower(osvinternal.EcosystemLinux) + "=" + dir}},
+		{VendorFeeds: []string{strings.ToLower(osvinternal.EcosystemLinux) + "=" + archive}},
+		{VendorURL: "https://example.com/osv"},
+		{VendorURL: dir},
+		{VendorURL: "file://" + dir},
+		{VendorURL: " " + dir + " "},
+	} {
+		if err := checkVendorOptions(ok); err != nil {
+			t.Errorf("checkVendorOptions(%+v) = %v, want nil", ok, err)
+		}
 	}
 	for _, bad := range []string{osvinternal.EcosystemJDK, "Zulu=https://example.com/osv"} {
 		if err := checkVendorOptions(ScannerActions{VendorFeeds: []string{bad}}); err == nil {
 			t.Errorf("checkVendorOptions(%q) = nil, want an error", bad)
+		}
+	}
+	// a local location that does not exist is rejected before the scan
+	missing := filepath.Join(dir, "missing")
+	for _, bad := range []ScannerActions{
+		{VendorURL: missing},
+		{VendorURL: "file://" + missing},
+		{VendorFeeds: []string{osvinternal.EcosystemNIK + "=" + missing}},
+		{VendorFeeds: []string{osvinternal.EcosystemNIK + "=" + filepath.Join(missing, "nik.zip")}},
+	} {
+		if err := checkVendorOptions(bad); err == nil {
+			t.Errorf("checkVendorOptions(%+v) = nil, want an error", bad)
 		}
 	}
 }

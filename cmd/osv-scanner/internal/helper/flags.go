@@ -171,12 +171,12 @@ func BuildCommonScanFlags(defaultExtractors []string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:    "vendor-url",
-			Usage:   "base location of the vendor OSV archives for all products (<url>/<product>/all.zip); http(s), file:// or a directory",
+			Usage:   "base location of the vendor OSV archives for all products (<url>/<product>/all.zip); http(s), file:// or a directory; used in online scans too (the products are matched from it instead of api.osv.dev)",
 			Sources: cli.EnvVars("OSV_SCANNER_VENDOR_URL"),
 		},
 		&cli.StringSliceFlag{
 			Name:    "vendor-feed",
-			Usage:   "location of the vendor OSV archive of one product, as \"<product>=<url>\"; repeatable; products: " + strings.Join(osvinternal.Ecosystems, ", "),
+			Usage:   "location of the vendor OSV archive of one product, as \"<product>=<url>\"; repeatable; products: " + strings.Join(osvinternal.Ecosystems, ", ") + "; used like --vendor-url, which it overrides for that product",
 			Sources: cli.EnvVars("OSV_SCANNER_VENDOR_FEED"),
 		},
 		&cli.BoolFlag{

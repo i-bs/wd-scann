@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/osv-scalibr/enricher"
 	"github.com/google/osv-scalibr/enricher/packagedeprecation"
 	"github.com/google/osv-scalibr/enricher/reachability/java"
+	"github.com/google/osv-scalibr/enricher/vulnmatch/osvdev"
 	"github.com/google/osv-scalibr/enricher/vulnmatch/osvlocal"
 	"github.com/google/osv-scalibr/extractor"
 	"github.com/google/osv-scalibr/extractor/filesystem"
@@ -51,15 +53,18 @@ func configurePlugins(plugins []plugin.Plugin, accessors ExternalAccessors, acti
 			OSVClient:  accessors.OSVDevClient,
 		})
 		// Next to api.osv.dev the local matcher handles the ecosystems the API
-		// does not serve (the vendor's JDK / NIK); offline it matches everything.
-		// The feeds were validated by checkVendorOptions.
+		// does not serve (the vendor's JDK / NIK) and the vendor products with a
+		// configured source; offline it matches everything. The options were
+		// validated by checkVendorOptions.
 		feeds, _ := osvlocal.ParseVendorFeeds(actions.VendorFeeds)
-		osvlocal.Configure(plug, osvlocal.Options{
+		local := osvlocal.Options{
 			LocalOnlyEcosystems: !actions.CompareOffline,
 			VendorURL:           actions.VendorURL,
 			VendorFeeds:         feeds,
 			VendorStrict:        actions.VendorStrict,
-		})
+		}
+		osvlocal.Configure(plug, local)
+		osvdev.Configure(plug, osvdev.Options{MatchedLocally: local.MatchedLocally})
 	}
 }
 
@@ -162,7 +167,7 @@ func getPlugins(
 	if actions.CompareOffline {
 		actions.PluginsEnabled = append(actions.PluginsEnabled, "vulnmatch/osvlocal")
 	} else {
-		// osvlocal is restricted to the ecosystems api.osv.dev does not serve, see configurePlugins
+		// osvlocal is restricted to the ecosystems osvdev leaves out, see configurePlugins
 		actions.PluginsEnabled = append(actions.PluginsEnabled, "vulnmatch/osvdev", "vulnmatch/osvlocal")
 	}
 
@@ -588,11 +593,52 @@ func dedupPackageVulns(vulns []*inventory.PackageVuln) []*inventory.PackageVuln 
 	return result
 }
 
-// checkVendorOptions validates the --vendor-feed pairs.
+// checkVendorOptions validates the --vendor-feed pairs and rejects a
+// --vendor-url or feed naming a local location that does not exist, so that
+// a typo is reported before the scan rather than as an unavailable database
+// of every product.
 func checkVendorOptions(actions ScannerActions) error {
-	_, err := osvlocal.ParseVendorFeeds(actions.VendorFeeds)
+	feeds, err := osvlocal.ParseVendorFeeds(actions.VendorFeeds)
+	if err != nil {
+		return err
+	}
+	if err := checkVendorLocation("--vendor-url", actions.VendorURL); err != nil {
+		return err
+	}
+	for family, location := range feeds {
+		if err := checkVendorLocation("--vendor-feed "+family, location); err != nil {
+			return err
+		}
+	}
 
-	return err
+	return nil
+}
+
+// checkVendorLocation returns an error when location is a local path (plain
+// or file://) that does not exist. Remote locations are not checked.
+func checkVendorLocation(option, location string) error {
+	location = strings.TrimSpace(location)
+	lower := strings.ToLower(location)
+	if location == "" || strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
+		return nil
+	}
+	p := location
+	if strings.HasPrefix(lower, "file://") {
+		p = location[len("file://"):]
+		if u, err := url.Parse(location); err == nil {
+			p = u.Path
+			if u.Host != "" && u.Host != "localhost" {
+				// "file://relative/dir" is not valid but people type it:
+				// keep the host as the first path element (as osv-internal does)
+				p = filepath.Join(u.Host, p)
+			}
+		}
+	}
+	if _, err := os.Stat(p); err != nil {
+		return fmt.Errorf("%s: %q: %w", option, location, err)
+	}
+
+	return nil
 }
 
 // vulnMatchFailure returns an error when a failed vulnerability matcher must

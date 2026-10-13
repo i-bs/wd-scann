@@ -63,14 +63,16 @@ type ScannerActions struct {
 	// VendorURL is the base location of the OSV archives of the vendor
 	// products (<url>/<product>/all.zip): http(s), file:// or a directory.
 	// VendorFeeds locates single products as "<product>=<url>" pairs and wins
-	// over VendorURL. Without either, the vendor distributions
-	// come from the offline database host (LocalDBURL) and
-	// the standalone runtimes from the module's product base URL.
+	// over VendorURL. A source given either way is consulted in every scan,
+	// also when everything else is queried from api.osv.dev. Without either,
+	// the vendor distributions come from api.osv.dev online and from the
+	// offline database host (LocalDBURL) offline, and the standalone runtimes
+	// from the module's product base URL.
 	VendorURL   string
 	VendorFeeds []string
 	// VendorStrict makes an unavailable database of a vendor product fail the
-	// scan; by default it is a warning (the packages of that product were not
-	// checked) and the exit code is unchanged.
+	// scan, even when a cached copy exists (it may be stale or from another
+	// source); by default it is a warning and the exit code is unchanged.
 	VendorStrict bool
 
 	// network-backed plugins
