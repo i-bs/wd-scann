@@ -9,16 +9,20 @@ import (
 
 	osvinternal "github.com/bell-sw/osv-internal"
 	"github.com/bell-sw/osv-internal/osvdata"
+	"github.com/bell-sw/osv-internal/testfix"
 	"github.com/google/osv-scalibr/plugin"
 )
+
+// The first JDK and NIK families of the module.
+var famJDK, famNIK = testfix.Product(osvinternal.KindJDK).Family, testfix.Product(osvinternal.KindNIK).Family
 
 func TestVulnMatchFailure(t *testing.T) {
 	t.Parallel()
 
 	// the plugin's failure reason: the module's canonical warning, then the download error
 	unavailable := (&osvdata.UnavailableError{
-		Family: osvinternal.EcosystemJDK, Reason: "HTTP 404",
-		URL: osvdata.DefaultProductBaseURL + "/" + url.PathEscape(osvinternal.EcosystemJDK) + "/all.zip",
+		Family: famJDK, Reason: "HTTP 404",
+		URL: osvdata.DefaultProductBaseURL + "/" + url.PathEscape(famJDK) + "/all.zip",
 	}).Warning() + ": unable to fetch OSV database: db host returned 404 Not Found"
 	failed := func(name, reason string) *plugin.Status {
 		return &plugin.Status{Name: name, Status: &plugin.ScanStatus{Status: plugin.ScanStatusFailed, FailureReason: reason}}
@@ -39,7 +43,7 @@ func TestVulnMatchFailure(t *testing.T) {
 		{"offline with downloads, vendor database unavailable, strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{CompareOffline: true, DownloadDatabases: true, VendorStrict: true}, true},
 		{"strict, failure of another kind", failed("vulnmatch/osvlocal", "db host returned 404 Not Found"), ScannerActions{VendorStrict: true}, false},
 		{"online, vendor database unavailable, --vendor-url given, not strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{VendorURL: "https://mirror.example/osv"}, false},
-		{"online, vendor database unavailable, --vendor-feed given, not strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{VendorFeeds: []string{osvinternal.EcosystemJDK + "=https://mirror.example/osv"}}, false},
+		{"online, vendor database unavailable, --vendor-feed given, not strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{VendorFeeds: []string{famJDK + "=https://mirror.example/osv"}}, false},
 		{"online, vendor database unavailable, --vendor-url given, strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{VendorURL: "https://mirror.example/osv", VendorStrict: true}, true},
 		{"offline with downloads, vendor database unavailable, --vendor-url given, strict", failed("vulnmatch/osvlocal", unavailable), ScannerActions{CompareOffline: true, DownloadDatabases: true, VendorURL: "/srv/osv", VendorStrict: true}, true},
 	}
@@ -65,7 +69,7 @@ func TestCheckVendorOptions(t *testing.T) {
 
 	for _, ok := range []ScannerActions{
 		{},
-		{VendorFeeds: []string{osvinternal.EcosystemJDK + "=https://example.com/osv", strings.ToLower(osvinternal.EcosystemLinux) + "=" + dir}},
+		{VendorFeeds: []string{famJDK + "=https://example.com/osv", strings.ToLower(osvinternal.EcosystemLinux) + "=" + dir}},
 		{VendorFeeds: []string{strings.ToLower(osvinternal.EcosystemLinux) + "=" + archive}},
 		{VendorURL: "https://example.com/osv"},
 		{VendorURL: dir},
@@ -76,7 +80,7 @@ func TestCheckVendorOptions(t *testing.T) {
 			t.Errorf("checkVendorOptions(%+v) = %v, want nil", ok, err)
 		}
 	}
-	for _, bad := range []string{osvinternal.EcosystemJDK, "Zulu=https://example.com/osv"} {
+	for _, bad := range []string{famJDK, "Zulu=https://example.com/osv"} {
 		if err := checkVendorOptions(ScannerActions{VendorFeeds: []string{bad}}); err == nil {
 			t.Errorf("checkVendorOptions(%q) = nil, want an error", bad)
 		}
@@ -86,8 +90,8 @@ func TestCheckVendorOptions(t *testing.T) {
 	for _, bad := range []ScannerActions{
 		{VendorURL: missing},
 		{VendorURL: "file://" + missing},
-		{VendorFeeds: []string{osvinternal.EcosystemNIK + "=" + missing}},
-		{VendorFeeds: []string{osvinternal.EcosystemNIK + "=" + filepath.Join(missing, "nik.zip")}},
+		{VendorFeeds: []string{famNIK + "=" + missing}},
+		{VendorFeeds: []string{famNIK + "=" + filepath.Join(missing, "nik.zip")}},
 	} {
 		if err := checkVendorOptions(bad); err == nil {
 			t.Errorf("checkVendorOptions(%+v) = nil, want an error", bad)
